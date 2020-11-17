@@ -19,7 +19,7 @@ const (
 )
 
 func main() {
-	node := flag.String("node", "http://localhost:8545", "the URL of the local Ethereum node")
+	node := flag.String("node", "http://localhost:8545", "the URL of the Ethereum node to check for health")
 	port := flag.Int("port", 8500, "the HTTP port on which to listen")
 	threshold := flag.Int64("threshold", 10, "the maximum acceptable number of blocks to allow the node to be behind")
 	flag.Parse()
@@ -35,7 +35,7 @@ func main() {
 		var blockCypherHeight int64
 		var nanoPoolHeight int64
 		var etherscanHeight int64
-		var localHeight int64
+		var nodeHeight int64
 		var j map[string]interface{}
 
 		// Query BlockCypher
@@ -90,27 +90,27 @@ func main() {
 		}
 		log.Debug("Etherscan queried.")
 
-		// Query the local node over JSON-RPC
-		log.Debug("Querying the local node over JSON-RPC...")
-		localHeight, err = ethnode.GetBlockNumber(*node)
+		// Query the node over JSON-RPC
+		log.Debug("Querying the node over JSON-RPC...")
+		nodeHeight, err = ethnode.GetBlockNumber(*node)
 		if err != nil {
-			log.WithError(err).Error("JSON-RPC request to the local node failed!")
-			http.Error(w, "JSON-RPC request to the local node failed!", 400)
+			log.WithError(err).Error("JSON-RPC request to the node failed!")
+			http.Error(w, "JSON-RPC request to the node failed!", 400)
 			return
 		}
-		log.Debug("Local node queried.")
+		log.Debug("Node queried.")
 
 		// Print heights
 		log.WithFields(log.Fields{
-			"localHeight":       localHeight,
+			"nodeHeight":        nodeHeight,
 			"blockCypherHeight": blockCypherHeight,
 			"nanoPoolHeight":    nanoPoolHeight,
 			"etherscanHeight":   etherscanHeight,
-		}).Info("Queried heights.", localHeight)
+		}).Info("Queried heights.")
 
 		// Check heights
-		localHeightPlusThreshold := localHeight + *threshold
-		// Compare the local height plus threshold against the maximum block height received from external sources
+		nodeHeightPlusThreshold := nodeHeight + *threshold
+		// Compare the node height plus threshold against the maximum block height received from external sources
 		var maxExternalHeight int64
 		if blockCypherHeight > maxExternalHeight {
 			maxExternalHeight = blockCypherHeight
@@ -121,13 +121,13 @@ func main() {
 		if etherscanHeight > maxExternalHeight {
 			maxExternalHeight = etherscanHeight
 		}
-		heightDiff := maxExternalHeight - localHeightPlusThreshold
+		heightDiff := maxExternalHeight - nodeHeightPlusThreshold
 		if heightDiff <= 0 {
-			log.Info("The local node is fully in sync.")
-			w.Write([]byte("The local node is fully in sync."))
+			log.Info("The node is fully in sync.")
+			w.Write([]byte("The node is fully in sync."))
 		} else {
-			log.Warnf("The local node is %d blocks behind!", heightDiff)
-			http.Error(w, fmt.Sprintf("The local node is %d blocks behind!", heightDiff), 400)
+			log.Warnf("The node is %d blocks behind!", heightDiff)
+			http.Error(w, fmt.Sprintf("The node is %d blocks behind!", heightDiff), 400)
 			return
 		}
 	})

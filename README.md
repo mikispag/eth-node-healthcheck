@@ -1,5 +1,5 @@
 # eth-node-healthcheck
-A simple Ethereum node healthcheck service written in Go.
+A simple Ethereum node health check service written in Go.
 
 ## Usage
 
@@ -7,7 +7,7 @@ A simple Ethereum node healthcheck service written in Go.
 $ eth-node-healthcheck -help
 Usage of eth-node-healthcheck:
   -node string
-    	the URL of the local Ethereum node (default "http://localhost:8545")
+    	the URL of the Ethereum node to check for health (default "http://localhost:8545")
   -port int
     	the HTTP port on which to listen (default 8500)
   -threshold int
