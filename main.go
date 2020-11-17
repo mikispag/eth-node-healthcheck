@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/mikispag/eth-node-healthcheck/ethnode"
-	"github.com/mikispag/web"
+	"github.com/mikispag/utils/web"
 	log "github.com/sirupsen/logrus"
 )
 
