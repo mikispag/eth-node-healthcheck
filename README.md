@@ -1,5 +1,6 @@
 # eth-node-healthcheck
 A simple Ethereum node health check service written in Go.
+It returns a `200` HTTP status code when the monitored node is in sync with the Ethereum mainnet and `503` otherwise. As external oracles, it attempts a consensus between BlockCypher, NanoPool and Etherscan.
 
 ## Usage
 

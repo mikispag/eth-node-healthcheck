@@ -95,7 +95,7 @@ func main() {
 		nodeHeight, err = ethnode.GetBlockNumber(*node)
 		if err != nil {
 			log.WithError(err).Error("JSON-RPC request to the node failed!")
-			http.Error(w, "JSON-RPC request to the node failed!", 400)
+			http.Error(w, "JSON-RPC request to the node failed!", 503)
 			return
 		}
 		log.Debug("Node queried.")
@@ -127,7 +127,7 @@ func main() {
 			w.Write([]byte("The node is fully in sync."))
 		} else {
 			log.Warnf("The node is %d blocks behind!", heightDiff)
-			http.Error(w, fmt.Sprintf("The node is %d blocks behind!", heightDiff), 400)
+			http.Error(w, fmt.Sprintf("The node is %d blocks behind!", heightDiff), 503)
 			return
 		}
 	})
