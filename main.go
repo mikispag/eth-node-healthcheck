@@ -39,6 +39,7 @@ func main() {
 		var j map[string]interface{}
 
 		// Query BlockCypher
+		log.Debug("Querying BlockCypher...")
 		j, err := web.GetJSON(blockCypherURL)
 		if err != nil {
 			log.WithError(err).Error("Unable to read from BlockCypher API!")
@@ -51,8 +52,10 @@ func main() {
 				// Continue!
 			}
 		}
+		log.Debug("BlockCypher queried.")
 
 		// Query NanoPool
+		log.Debug("Querying NanoPool...")
 		j, err = web.GetJSON(nanoPoolURL)
 		if err != nil {
 			log.WithError(err).Error("Unable to read from NanoPool API!")
@@ -65,8 +68,10 @@ func main() {
 				// Continue!
 			}
 		}
+		log.Debug("NanoPool queried.")
 
 		// Query Etherscan
+		log.Debug("Querying Etherscan...")
 		j, err = web.GetJSON(etherscanURL)
 		if err != nil {
 			log.WithError(err).Error("Unable to read from Etherscan API!")
@@ -83,14 +88,17 @@ func main() {
 				// Continue!
 			}
 		}
+		log.Debug("Etherscan queried.")
 
 		// Query the local node over JSON-RPC
+		log.Debug("Querying the local node over JSON-RPC...")
 		localHeight, err = ethnode.GetBlockNumber(*node)
 		if err != nil {
 			log.WithError(err).Error("JSON-RPC request to the local node failed!")
 			http.Error(w, "JSON-RPC request to the local node failed!", 400)
 			return
 		}
+		log.Debug("Local node queried.")
 
 		// Print heights
 		log.WithFields(log.Fields{
