@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/mikispag/eth-node-healthcheck/ethnode"
-	"github.com/mikispag/eth-node-healthcheck/web"
+	"github.com/mikispag/web"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -40,7 +40,7 @@ func main() {
 
 		// Query BlockCypher
 		log.Debug("Querying BlockCypher...")
-		j, err := web.GetJSON(blockCypherURL)
+		err := web.GetJSON(blockCypherURL, &j)
 		if err != nil {
 			log.WithError(err).Error("Unable to read from BlockCypher API!")
 			// Continue!
@@ -56,7 +56,7 @@ func main() {
 
 		// Query NanoPool
 		log.Debug("Querying NanoPool...")
-		j, err = web.GetJSON(nanoPoolURL)
+		err = web.GetJSON(nanoPoolURL, &j)
 		if err != nil {
 			log.WithError(err).Error("Unable to read from NanoPool API!")
 			// Continue!
@@ -72,7 +72,7 @@ func main() {
 
 		// Query Etherscan
 		log.Debug("Querying Etherscan...")
-		j, err = web.GetJSON(etherscanURL)
+		err = web.GetJSON(etherscanURL, &j)
 		if err != nil {
 			log.WithError(err).Error("Unable to read from Etherscan API!")
 			// Continue!

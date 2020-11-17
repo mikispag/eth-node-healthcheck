@@ -3,6 +3,7 @@ module github.com/mikispag/eth-node-healthcheck
 go 1.15
 
 require (
+	github.com/mikispag/web v0.0.0-20201117135255-3949471a21d8
 	github.com/onsi/gomega v1.10.3 // indirect
 	github.com/sirupsen/logrus v1.7.0
 	github.com/stretchr/testify v1.3.0 // indirect
