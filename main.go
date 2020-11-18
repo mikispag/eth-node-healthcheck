@@ -38,9 +38,19 @@ func main() {
 		var nodeHeight int64
 		var j map[string]interface{}
 
+		// Query the node over JSON-RPC
+		log.Debug("Querying the node over JSON-RPC...")
+		nodeHeight, err := ethnode.GetBlockNumber(*node)
+		if err != nil {
+			log.WithError(err).Error("JSON-RPC request to the node failed!")
+			http.Error(w, "JSON-RPC request to the node failed!", 503)
+			return
+		}
+		log.Debug("Node queried.")
+
 		// Query BlockCypher
 		log.Debug("Querying BlockCypher...")
-		err := web.GetJSON(blockCypherURL, &j)
+		err = web.GetJSON(blockCypherURL, &j)
 		if err != nil {
 			log.WithError(err).Error("Unable to read from BlockCypher API!")
 			// Continue!
@@ -89,16 +99,6 @@ func main() {
 			}
 		}
 		log.Debug("Etherscan queried.")
-
-		// Query the node over JSON-RPC
-		log.Debug("Querying the node over JSON-RPC...")
-		nodeHeight, err = ethnode.GetBlockNumber(*node)
-		if err != nil {
-			log.WithError(err).Error("JSON-RPC request to the node failed!")
-			http.Error(w, "JSON-RPC request to the node failed!", 503)
-			return
-		}
-		log.Debug("Node queried.")
 
 		// Print heights
 		log.WithFields(log.Fields{
