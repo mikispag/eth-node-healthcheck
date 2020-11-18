@@ -13,4 +13,6 @@ Usage of eth-node-healthcheck:
     	the HTTP port on which to listen (default 8500)
   -threshold int
     	the maximum acceptable number of blocks to allow the node to be behind (default 10)
+  -timeout duration
+    	the timeout for the entire check routine (default 10s)
 ```
