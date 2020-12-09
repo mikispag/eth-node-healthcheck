@@ -103,43 +103,32 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	var blockCypherHeight int64
-	var nanoPoolHeight int64
-	var etherscanHeight int64
-	select {
-	case blockCypherHeight = <-blockCypherChannel:
-		log.WithField("height", blockCypherHeight).Debug("BlockCypher queried.")
-	case nanoPoolHeight = <-nanoPoolChannel:
-		log.WithField("height", nanoPoolHeight).Debug("NanoPool queried.")
-	case etherscanHeight = <-etherscanChannel:
-		log.WithField("height", etherscanHeight).Debug("Etherscan queried.")
-	case <-time.After(*timeout):
-		log.Error("Timeout reached while waiting for external block heights.")
-		http.Error(w, "Timeout reached while waiting for external block heights.", 503)
-		return
-	}
-
-	// Print heights
-	log.WithFields(log.Fields{
-		"nodeHeight":        nodeHeight,
-		"blockCypherHeight": blockCypherHeight,
-		"nanoPoolHeight":    nanoPoolHeight,
-		"etherscanHeight":   etherscanHeight,
-	}).Info("Queried heights.")
-
-	// Check heights
-	nodeHeightPlusThreshold := nodeHeight + *threshold
-	// Compare the node height plus threshold against the maximum block height received from external sources
 	var maxExternalHeight int64
-	if blockCypherHeight > maxExternalHeight {
-		maxExternalHeight = blockCypherHeight
+	timeoutChannel := time.After(*timeout)
+	for i := 0; i < 3; i++ {
+		select {
+		case blockCypherHeight := <-blockCypherChannel:
+			log.WithField("height", blockCypherHeight).Debug("BlockCypher queried.")
+			if blockCypherHeight > maxExternalHeight {
+				maxExternalHeight = blockCypherHeight
+			}
+		case nanoPoolHeight := <-nanoPoolChannel:
+			log.WithField("height", nanoPoolHeight).Debug("NanoPool queried.")
+			if nanoPoolHeight > maxExternalHeight {
+				maxExternalHeight = nanoPoolHeight
+			}
+		case etherscanHeight := <-etherscanChannel:
+			log.WithField("height", etherscanHeight).Debug("Etherscan queried.")
+			if etherscanHeight > maxExternalHeight {
+				maxExternalHeight = etherscanHeight
+			}
+		case <-timeoutChannel:
+			log.Error("Timeout reached while waiting for external block heights.")
+			http.Error(w, "Timeout reached while waiting for external block heights.", 503)
+			return
+		}
 	}
-	if nanoPoolHeight > maxExternalHeight {
-		maxExternalHeight = nanoPoolHeight
-	}
-	if etherscanHeight > maxExternalHeight {
-		maxExternalHeight = etherscanHeight
-	}
+
 	// If no external heights was fetched, error out.
 	if maxExternalHeight == 0 {
 		log.Error("No external height was fetched, returning error!")
@@ -147,6 +136,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check heights
+	nodeHeightPlusThreshold := nodeHeight + *threshold
 	heightDiff := maxExternalHeight - nodeHeightPlusThreshold
 	if heightDiff <= 0 {
 		log.Info("The node is fully in sync.")
