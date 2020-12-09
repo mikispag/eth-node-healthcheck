@@ -23,6 +23,7 @@ var (
 	port      = flag.Int("port", 8500, "the HTTP port on which to listen")
 	timeout   = flag.Duration("timeout", 10*time.Second, "the timeout for the entire check routine")
 	threshold = flag.Int64("threshold", 10, "the maximum acceptable number of blocks to allow the node to be behind")
+	webClient = web.NewWithTimeout(*timeout)
 )
 
 func handler(w http.ResponseWriter, r *http.Request) {
@@ -40,11 +41,11 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "JSON-RPC request to the node failed!", 503)
 		return
 	}
-	log.Debug("Node queried.")
+	log.WithField("height", nodeHeight).Debug("Node queried.")
 
 	// Query BlockCypher
 	log.Debug("Querying BlockCypher...")
-	err = web.GetJSON(blockCypherURL, &j)
+	err = webClient.GetJSON(blockCypherURL, &j)
 	if err != nil {
 		log.WithError(err).Error("Unable to read from BlockCypher API!")
 		// Continue!
@@ -56,11 +57,11 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			// Continue!
 		}
 	}
-	log.Debug("BlockCypher queried.")
+	log.WithField("height", blockCypherHeight).Debug("BlockCypher queried.")
 
 	// Query NanoPool
 	log.Debug("Querying NanoPool...")
-	err = web.GetJSON(nanoPoolURL, &j)
+	err = webClient.GetJSON(nanoPoolURL, &j)
 	if err != nil {
 		log.WithError(err).Error("Unable to read from NanoPool API!")
 		// Continue!
@@ -72,11 +73,11 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			// Continue!
 		}
 	}
-	log.Debug("NanoPool queried.")
+	log.WithField("height", nanoPoolHeight).Debug("NanoPool queried.")
 
 	// Query Etherscan
 	log.Debug("Querying Etherscan...")
-	err = web.GetJSON(etherscanURL, &j)
+	err = webClient.GetJSON(etherscanURL, &j)
 	if err != nil {
 		log.WithError(err).Error("Unable to read from Etherscan API!")
 		// Continue!
@@ -92,7 +93,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			// Continue!
 		}
 	}
-	log.Debug("Etherscan queried.")
+	log.WithField("height", etherscanHeight).Debug("Etherscan queried.")
 
 	// Print heights
 	log.WithFields(log.Fields{
@@ -115,6 +116,14 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	if etherscanHeight > maxExternalHeight {
 		maxExternalHeight = etherscanHeight
 	}
+
+	// If no external heights was fetched, error out.
+	if maxExternalHeight == 0 {
+		log.Error("No external height was fetched, returning error!")
+		http.Error(w, "No external height was fetched, returning error!", 503)
+		return
+	}
+
 	heightDiff := maxExternalHeight - nodeHeightPlusThreshold
 	if heightDiff <= 0 {
 		log.Info("The node is fully in sync.")
