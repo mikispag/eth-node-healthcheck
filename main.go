@@ -29,7 +29,6 @@ var (
 func handler(w http.ResponseWriter, r *http.Request) {
 	var nodeHeight int64
 	// Query the node over JSON-RPC
-	log.Debug("Querying the node over JSON-RPC...")
 	nodeHeight, err := ethnode.GetBlockNumber(*node)
 	if err != nil {
 		log.WithError(err).Error("JSON-RPC request to the node failed!")
@@ -62,7 +61,6 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		var j map[string]interface{}
 
-		log.Debug("Querying NanoPool...")
 		err = webClient.GetJSON(nanoPoolURL, &j)
 		if err != nil {
 			log.WithError(err).Error("Unable to read from NanoPool API!")
@@ -82,7 +80,6 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		var j map[string]interface{}
 
-		log.Debug("Querying Etherscan...")
 		err = webClient.GetJSON(etherscanURL, &j)
 		if err != nil {
 			log.WithError(err).Error("Unable to read from Etherscan API!")
