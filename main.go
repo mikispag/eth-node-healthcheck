@@ -45,14 +45,16 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		err = webClient.GetJSON(blockCypherURL, &j)
 		if err != nil {
 			log.WithError(err).Error("Unable to read from BlockCypher API!")
-			// Continue!
+			blockCypherChannel <- 0
+			return
+		}
+		if h, ok := j["height"].(float64); ok {
+			height := int64(h)
+			log.WithField("height", height).Debug("BlockCypher queried.")
+			blockCypherChannel <- height
 		} else {
-			if h, ok := j["height"].(float64); ok {
-				blockCypherChannel <- int64(h)
-			} else {
-				log.Error("Unable to read block height from the BlockCypher API response: %#v!", j)
-				// Continue!
-			}
+			log.Error("Unable to read block height from the BlockCypher API response: %#v!", j)
+			blockCypherChannel <- 0
 		}
 	}()
 
@@ -64,14 +66,16 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		err = webClient.GetJSON(nanoPoolURL, &j)
 		if err != nil {
 			log.WithError(err).Error("Unable to read from NanoPool API!")
-			// Continue!
+			nanoPoolChannel <- 0
+			return
+		}
+		if h, ok := j["data"].(float64); ok {
+			height := int64(h)
+			log.WithField("height", height).Debug("NanoPool queried.")
+			nanoPoolChannel <- height
 		} else {
-			if h, ok := j["data"].(float64); ok {
-				nanoPoolChannel <- int64(h)
-			} else {
-				log.Error("Unable to read block height from the NanoPool API response: %#v!", j)
-				// Continue!
-			}
+			log.Error("Unable to read block height from the NanoPool API response: %#v!", j)
+			nanoPoolChannel <- 0
 		}
 	}()
 
@@ -83,20 +87,22 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		err = webClient.GetJSON(etherscanURL, &j)
 		if err != nil {
 			log.WithError(err).Error("Unable to read from Etherscan API!")
-			// Continue!
-		} else {
-			if hex, ok := j["result"].(string); ok {
-				etherscanHeight, err := strconv.ParseInt(hex, 0, 64)
-				if err != nil {
-					log.WithError(err).Errorf("Unable to convert hexadecimal block number to integer from the Etherscan API response: %s!", hex)
-					// Continue!
-				} else {
-					etherscanChannel <- etherscanHeight
-				}
-			} else {
-				log.Errorf("Unable to read block height from the Etherscan API response: %#v!", j)
+			etherscanChannel <- 0
+			return
+		}
+		if hex, ok := j["result"].(string); ok {
+			etherscanHeight, err := strconv.ParseInt(hex, 0, 64)
+			if err != nil {
+				log.WithError(err).Errorf("Unable to convert hexadecimal block number to integer from the Etherscan API response: %s!", hex)
+				etherscanChannel <- 0
 				// Continue!
+			} else {
+				log.WithField("height", etherscanHeight).Debug("Etherscan queried.")
+				etherscanChannel <- etherscanHeight
 			}
+		} else {
+			log.Errorf("Unable to read block height from the Etherscan API response: %#v!", j)
+			etherscanChannel <- 0
 		}
 	}()
 
@@ -105,24 +111,20 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	for i := 0; i < 3; i++ {
 		select {
 		case blockCypherHeight := <-blockCypherChannel:
-			log.WithField("height", blockCypherHeight).Debug("BlockCypher queried.")
 			if blockCypherHeight > maxExternalHeight {
 				maxExternalHeight = blockCypherHeight
 			}
 		case nanoPoolHeight := <-nanoPoolChannel:
-			log.WithField("height", nanoPoolHeight).Debug("NanoPool queried.")
 			if nanoPoolHeight > maxExternalHeight {
 				maxExternalHeight = nanoPoolHeight
 			}
 		case etherscanHeight := <-etherscanChannel:
-			log.WithField("height", etherscanHeight).Debug("Etherscan queried.")
 			if etherscanHeight > maxExternalHeight {
 				maxExternalHeight = etherscanHeight
 			}
 		case <-timeoutChannel:
 			log.Error("Timeout reached while waiting for external block heights.")
-			http.Error(w, "Timeout reached while waiting for external block heights.", 503)
-			return
+			break
 		}
 	}
 
@@ -152,7 +154,7 @@ func main() {
 	// Initialize logger
 	log.SetFormatter(&log.TextFormatter{
 		FullTimestamp:   true,
-		TimestampFormat: time.RFC822,
+		TimestampFormat: "2006-01-02 15:04:05",
 	})
 	log.SetLevel(log.DebugLevel)
 
