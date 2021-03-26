@@ -32,7 +32,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	nodeHeight, err := ethnode.GetBlockNumber(*node)
 	if err != nil {
 		log.WithError(err).Error("JSON-RPC request to the node failed!")
-		http.Error(w, "JSON-RPC request to the node failed!", 503)
+		http.Error(w, "JSON-RPC request to the node failed!", http.StatusServiceUnavailable)
 		return
 	}
 	log.WithField("height", nodeHeight).Debug("Node queried.")
@@ -53,7 +53,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			log.WithField("height", height).Debug("BlockCypher queried.")
 			blockCypherChannel <- height
 		} else {
-			log.Error("Unable to read block height from the BlockCypher API response: %#v!", j)
+			log.Errorf("Unable to read block height from the BlockCypher API response: %#v!", j)
 			blockCypherChannel <- 0
 		}
 	}()
@@ -74,7 +74,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			log.WithField("height", height).Debug("NanoPool queried.")
 			nanoPoolChannel <- height
 		} else {
-			log.Error("Unable to read block height from the NanoPool API response: %#v!", j)
+			log.Errorf("Unable to read block height from the NanoPool API response: %#v!", j)
 			nanoPoolChannel <- 0
 		}
 	}()
@@ -108,6 +108,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	var maxExternalHeight int64
 	timeoutChannel := time.After(*timeout)
+out:
 	for i := 0; i < 3; i++ {
 		select {
 		case blockCypherHeight := <-blockCypherChannel:
@@ -124,14 +125,14 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			}
 		case <-timeoutChannel:
 			log.Error("Timeout reached while waiting for external block heights.")
-			break
+			break out
 		}
 	}
 
 	// If no external heights was fetched, error out.
 	if maxExternalHeight == 0 {
 		log.Error("No external height was fetched, returning error!")
-		http.Error(w, "No external height was fetched, returning error!", 503)
+		http.Error(w, "No external height was fetched, returning error!", http.StatusServiceUnavailable)
 		return
 	}
 
@@ -140,10 +141,13 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	heightDiff := maxExternalHeight - nodeHeightPlusThreshold
 	if heightDiff <= 0 {
 		log.Info("The node is fully in sync.")
-		w.Write([]byte("The node is fully in sync."))
+		_, err := w.Write([]byte("The node is fully in sync."))
+		if err != nil {
+			log.WithError(err).Error("Unable to write response.")
+		}
 	} else {
 		log.Warnf("The node is %d blocks behind!", heightDiff)
-		http.Error(w, fmt.Sprintf("The node is %d blocks behind!", heightDiff), 503)
+		http.Error(w, fmt.Sprintf("The node is %d blocks behind!", heightDiff), http.StatusServiceUnavailable)
 		return
 	}
 }
